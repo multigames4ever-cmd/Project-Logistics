@@ -42,8 +42,8 @@ class RealTimeTracker:
         action_frame = Frame(center_frame, bg="#2E4057")
         action_frame.pack(fill=X, pady=10)
         
-        Button(action_frame, text="Refresh", bg="#17A2B8", fg="white", width=18,
-               font=("Segoe UI", 10), command=self.load_active_deliveries).pack(side=LEFT, padx=5)
+        Button(action_frame, text="Refresh", bg="#5DADE2", fg="white", width=18,
+               font=("Segoe UI", 10), command=self.refresh_all).pack(side=LEFT, padx=5)
         
         # Active deliveries list
         list_frame = Frame(center_frame, bg="#2E4057")
@@ -53,7 +53,7 @@ class RealTimeTracker:
               font=("Segoe UI", 12, "bold")).pack(anchor=W, pady=5)
         
         columns = ("Delivery ID", "Item", "Amount", "Truck ID", "License Plate", "Status")
-        self.tracker_tree = Treeview(list_frame, columns=columns, show="headings", height=12)
+        self.tracker_tree = Treeview(list_frame, columns=columns, show="headings", height=8)
         
         widths = [100, 200, 100, 100, 150, 120]
         for col, width in zip(columns, widths):
@@ -64,6 +64,26 @@ class RealTimeTracker:
         self.tracker_tree.configure(yscroll=scrollbar.set)
         scrollbar.pack(side=RIGHT, fill=Y)
         self.tracker_tree.pack(fill=BOTH, expand=True)
+        
+        # Locations/Routes list
+        location_frame = Frame(center_frame, bg="#2E4057")
+        location_frame.pack(fill=BOTH, expand=True, pady=10)
+        
+        Label(location_frame, text="Delivery Routes & Locations", bg="#2E4057", fg="white",
+              font=("Segoe UI", 12, "bold")).pack(anchor=W, pady=5)
+        
+        loc_columns = ("Delivery ID", "Origin", "Destination", "Current Location", "Est. Hours")
+        self.location_tree = Treeview(location_frame, columns=loc_columns, show="headings", height=8)
+        
+        loc_widths = [100, 250, 250, 200, 100]
+        for col, width in zip(loc_columns, loc_widths):
+            self.location_tree.heading(col, text=col)
+            self.location_tree.column(col, width=width, anchor=CENTER)
+        
+        loc_scrollbar = Scrollbar(location_frame, orient=VERTICAL, command=self.location_tree.yview)
+        self.location_tree.configure(yscroll=loc_scrollbar.set)
+        loc_scrollbar.pack(side=RIGHT, fill=Y)
+        self.location_tree.pack(fill=BOTH, expand=True)
         
         # Statistics frame
         stats_frame = Frame(self.parent_frame, bg="#34495E", relief=RIDGE, bd=2)
@@ -79,12 +99,19 @@ class RealTimeTracker:
         bottom_frame = Frame(content_container, bg="#2E4057")
         bottom_frame.pack(fill=X, pady=10, padx=50)
         
-        Button(bottom_frame, text="Refresh Dashboard", width=20, bg="#17A2B8", fg="white",
+        Button(bottom_frame, text="Refresh Dashboard", width=20, bg="#5DADE2", fg="white",
                font=("Segoe UI", 10), command=self.main_window.show_dashboard).pack(side=LEFT, padx=10)
-        Button(bottom_frame, text="Logout", width=15, bg="#DC3545", fg="white",
+        Button(bottom_frame, text="Logout", width=15, bg="#ABB2B9", fg="white",
                font=("Segoe UI", 10), command=self.main_window.logout).pack(side=LEFT, padx=10)
         
         self.load_active_deliveries()
+        self.load_locations()
+        self.load_statistics()
+    
+    def refresh_all(self):
+        """Refresh all data"""
+        self.load_active_deliveries()
+        self.load_locations()
         self.load_statistics()
     
     def load_active_deliveries(self):
@@ -119,6 +146,37 @@ class RealTimeTracker:
             conn.close()
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load active deliveries: {e}")
+    
+    def load_locations(self):
+        """Load delivery locations and routes"""
+        for item in self.location_tree.get_children():
+            self.location_tree.delete(item)
+        
+        try:
+            conn = mysql.connector.connect(host="127.0.0.1", user="root", password="", database="inventories")
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT l.delivery_id, l.origin, l.destination, l.current_location, 
+                       l.estimated_hours
+                FROM locations l
+                INNER JOIN deliveries d ON l.delivery_id = d.id
+                WHERE d.Status = 'In Transit' AND d.Deleted = 0
+                ORDER BY l.delivery_id DESC
+            """)
+            
+            for row in cursor.fetchall():
+                delivery_id, origin, destination, current_loc, est_hours = row
+                self.location_tree.insert("", END, values=(
+                    delivery_id,
+                    origin or "N/A",
+                    destination or "N/A",
+                    current_loc or "En Route",
+                    f"{est_hours:.1f}" if est_hours else "N/A"
+                ))
+            
+            conn.close()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load locations: {e}")
     
     def load_statistics(self):
         """Load delivery statistics"""

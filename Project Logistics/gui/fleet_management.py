@@ -42,15 +42,15 @@ class FleetManagement:
         action_frame = Frame(center_frame, bg="#2E4057")
         action_frame.pack(fill=X, pady=10)
         
-        Button(action_frame, text="+ Add Truck", bg="#28A745", fg="white", width=18,
+        Button(action_frame, text="+ Add Truck", bg="#5DADE2", fg="white", width=15,
                font=("Segoe UI", 10), command=self.show_add_truck_form).pack(side=LEFT, padx=5)
-        Button(action_frame, text="Edit Truck", bg="#FFC107", fg="black", width=18,
+        Button(action_frame, text="Edit Truck", bg="#5DADE2", fg="white", width=15,
                font=("Segoe UI", 10), command=self.show_edit_truck_form).pack(side=LEFT, padx=5)
-        Button(action_frame, text="Assign Truck", bg="#007BFF", fg="white", width=18,
-               font=("Segoe UI", 10), command=self.show_assign_truck_form).pack(side=LEFT, padx=5)
-        Button(action_frame, text="Set Maintenance", bg="#6C757D", fg="white", width=20,
+        Button(action_frame, text="Assign Location", bg="#5DADE2", fg="white", width=18,
+               font=("Segoe UI", 10), command=self.show_assign_location_form).pack(side=LEFT, padx=5)
+        Button(action_frame, text="Set Maintenance", bg="#ABB2B9", fg="white", width=18,
                font=("Segoe UI", 10), command=self.set_maintenance).pack(side=LEFT, padx=5)
-        Button(action_frame, text="Set Available", bg="#17A2B8", fg="white", width=18,
+        Button(action_frame, text="Set Available", bg="#52BE80", fg="white", width=15,
                font=("Segoe UI", 10), command=self.set_available).pack(side=LEFT, padx=5)
         
         # Trucks list
@@ -79,9 +79,9 @@ class FleetManagement:
         bottom_frame = Frame(center_frame, bg="#2E4057")
         bottom_frame.pack(fill=X, pady=10)
         
-        Button(bottom_frame, text="Refresh Dashboard", width=20, bg="#17A2B8", fg="white",
+        Button(bottom_frame, text="Refresh Dashboard", width=20, bg="#5DADE2", fg="white",
                font=("Segoe UI", 10), command=self.main_window.show_dashboard).pack(side=LEFT, padx=10)
-        Button(bottom_frame, text="Logout", width=15, bg="#DC3545", fg="white",
+        Button(bottom_frame, text="Logout", width=15, bg="#ABB2B9", fg="white",
                font=("Segoe UI", 10), command=self.main_window.logout).pack(side=LEFT, padx=10)
         
         self.load_trucks()
@@ -321,6 +321,108 @@ class FleetManagement:
         
         Button(btn_frame, text="Assign", bg="#007BFF", fg="white", width=12, command=submit).pack(side=LEFT, padx=5)
         Button(btn_frame, text="Cancel", bg="#6C757D", fg="white", width=12, command=self.clear_form).pack(side=LEFT, padx=5)
+    
+    def show_assign_location_form(self):
+        """Show form to assign location/route to delivery"""
+        try:
+            conn = mysql.connector.connect(host="127.0.0.1", user="root", password="", database="inventories")
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT d.id, i.Name, d.Delivery_Amount, d.Status
+                FROM deliveries d
+                JOIN inventory i ON d.inventory_id = i.id
+                WHERE d.Status IN ('Pending', 'In Transit') AND d.Deleted = 0
+            """)
+            deliveries = cursor.fetchall()
+            
+            cursor.execute("SELECT id, origin, destination, distance_km, estimated_hours FROM locations")
+            locations = cursor.fetchall()
+            conn.close()
+            
+            if not deliveries:
+                messagebox.showinfo("No Deliveries", "No active deliveries available")
+                return
+            if not locations:
+                messagebox.showinfo("No Locations", "No locations defined in database")
+                return
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load data: {e}")
+            return
+        
+        self.clear_form()
+        self.form_frame.pack(fill=X, pady=10, padx=20)
+        
+        Label(self.form_frame, text="Assign Location to Delivery", bg="#34495E", fg="white",
+              font=("Segoe UI", 14, "bold")).pack(pady=15)
+        
+        # Delivery selection section
+        delivery_section = Frame(self.form_frame, bg="#34495E")
+        delivery_section.pack(pady=10, padx=20, fill=BOTH)
+        
+        Label(delivery_section, text="Select Delivery:", bg="#34495E", fg="white",
+              font=("Segoe UI", 11, "bold")).pack(anchor=W, pady=5)
+        
+        delivery_frame = Frame(delivery_section, bg="#34495E")
+        delivery_frame.pack(fill=BOTH)
+        
+        delivery_scroll = Scrollbar(delivery_frame, orient=VERTICAL)
+        delivery_listbox = Listbox(delivery_frame, height=8, width=70, font=("Segoe UI", 10),
+                                   yscrollcommand=delivery_scroll.set, selectmode=SINGLE,
+                                   exportselection=False)
+        delivery_scroll.config(command=delivery_listbox.yview)
+        delivery_scroll.pack(side=RIGHT, fill=Y)
+        delivery_listbox.pack(side=LEFT, fill=BOTH, expand=True)
+        
+        for delivery in deliveries:
+            delivery_listbox.insert(END, f"ID: {delivery[0]} - {delivery[1]} - Amount: {delivery[2]} - Status: {delivery[3]}")
+        
+        # Route selection section
+        route_section = Frame(self.form_frame, bg="#34495E")
+        route_section.pack(pady=10, padx=20, fill=BOTH)
+        
+        Label(route_section, text="Select Route:", bg="#34495E", fg="white",
+              font=("Segoe UI", 11, "bold")).pack(anchor=W, pady=5)
+        
+        location_frame = Frame(route_section, bg="#34495E")
+        location_frame.pack(fill=BOTH)
+        
+        location_scroll = Scrollbar(location_frame, orient=VERTICAL)
+        location_listbox = Listbox(location_frame, height=10, width=70, font=("Segoe UI", 10),
+                                   yscrollcommand=location_scroll.set, selectmode=SINGLE,
+                                   exportselection=False)
+        location_scroll.config(command=location_listbox.yview)
+        location_scroll.pack(side=RIGHT, fill=Y)
+        location_listbox.pack(side=LEFT, fill=BOTH, expand=True)
+        
+        for loc in locations:
+            location_listbox.insert(END, f"{loc[1]} → {loc[2]} ({loc[4]} hrs)")
+        
+        def submit():
+            del_sel = delivery_listbox.curselection()
+            loc_sel = location_listbox.curselection()
+            if len(del_sel) == 0 or len(loc_sel) == 0:
+                messagebox.showwarning("No Selection", "Please select both delivery and route")
+                return
+            
+            delivery_id = deliveries[del_sel[0]][0]
+            location_id = locations[loc_sel[0]][0]
+            
+            try:
+                conn = mysql.connector.connect(host="127.0.0.1", user="root", password="", database="inventories")
+                cursor = conn.cursor()
+                cursor.execute("UPDATE locations SET delivery_id=%s WHERE id=%s", (delivery_id, location_id))
+                conn.commit()
+                conn.close()
+                
+                messagebox.showinfo("Success", "Location assigned successfully!")
+                self.clear_form()
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to assign location: {e}")
+        
+        btn_frame = Frame(self.form_frame, bg="#34495E")
+        btn_frame.pack(pady=10)
+        Button(btn_frame, text="Assign", bg="#5DADE2", fg="white", width=12, command=submit).pack(side=LEFT, padx=5)
+        Button(btn_frame, text="Cancel", bg="#ABB2B9", fg="white", width=12, command=self.clear_form).pack(side=LEFT, padx=5)
     
     def set_maintenance(self):
         """Set selected truck to maintenance status"""

@@ -43,14 +43,16 @@ class InventoryManagement:
         action_frame = Frame(center_frame, bg="#2E4057")
         action_frame.pack(fill=X, pady=10)
         
-        Button(action_frame, text="+ Add Item", bg="#28A745", fg="white", width=18,
+        Button(action_frame, text="+ Add Item", bg="#5DADE2", fg="white", width=16,
                font=("Segoe UI", 10), command=self.show_add_form).pack(side=LEFT, padx=5)
-        Button(action_frame, text="Update Item", bg="#007BFF", fg="white", width=18,
+        Button(action_frame, text="Update Item", bg="#5DADE2", fg="white", width=16,
                font=("Segoe UI", 10), command=self.show_update_form).pack(side=LEFT, padx=5)
-        Button(action_frame, text="Book Delivery", bg="#FFC107", fg="white", width=18,
+        Button(action_frame, text="Book Delivery", bg="#52BE80", fg="white", width=16,
                font=("Segoe UI", 10), command=self.open_book_delivery).pack(side=LEFT, padx=5)
-        Button(action_frame, text="Remove Item", bg="#D9534F", fg="white", width=18,
+        Button(action_frame, text="Remove Item", bg="#EC7063", fg="white", width=16,
                font=("Segoe UI", 10), command=self.show_remove_form).pack(side=LEFT, padx=5)
+        Button(action_frame, text="Reset ID", bg="#ABB2B9", fg="white", width=15,
+               font=("Segoe UI", 10), command=self.reset_ids).pack(side=LEFT, padx=5)
         
         # Inventory list
         list_frame = Frame(center_frame, bg="#2E4057")
@@ -78,9 +80,9 @@ class InventoryManagement:
         bottom_frame = Frame(center_frame, bg="#2E4057")
         bottom_frame.pack(fill=X, pady=10)
         
-        Button(bottom_frame, text="Refresh Dashboard", width=20, bg="#17A2B8", fg="white",
+        Button(bottom_frame, text="Refresh Dashboard", width=20, bg="#5DADE2", fg="white",
                font=("Segoe UI", 10), command=self.main_window.show_dashboard).pack(side=LEFT, padx=10)
-        Button(bottom_frame, text="Logout", width=15, bg="#DC3545", fg="white",
+        Button(bottom_frame, text="Logout", width=15, bg="#ABB2B9", fg="white",
                font=("Segoe UI", 10), command=self.main_window.logout).pack(side=LEFT, padx=10)
         
         self.load_inventory()
@@ -373,3 +375,17 @@ class InventoryManagement:
             self.form_frame.pack_forget()
         except:
             pass
+    
+    def reset_ids(self):
+        """Reset auto-increment ID for inventory table"""
+        if messagebox.askyesno("Confirm Reset", "This will reset the inventory ID counter. Are you sure?"):
+            try:
+                conn = mysql.connector.connect(host="127.0.0.1", user="root", password="", database="inventories")
+                cursor = conn.cursor()
+                cursor.execute("ALTER TABLE inventory AUTO_INCREMENT = 1")
+                conn.commit()
+                conn.close()
+                
+                messagebox.showinfo("Success", "Inventory ID counter has been reset!")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to reset IDs: {e}")

@@ -42,14 +42,16 @@ class DeliveryManagement:
         action_frame = Frame(center_frame, bg="#2E4057")
         action_frame.pack(fill=X, pady=10)
         
-        Button(action_frame, text="Mark as Delivered", bg="#28A745", fg="white", width=20,
+        Button(action_frame, text="Mark as Delivered", bg="#52BE80", fg="white", width=18,
                font=("Segoe UI", 10), command=self.mark_as_delivered).pack(side=LEFT, padx=5)
-        Button(action_frame, text="Move to Recycle Bin", bg="#FFC107", fg="black", width=22,
+        Button(action_frame, text="Move to Recycle Bin", bg="#5DADE2", fg="white", width=20,
                font=("Segoe UI", 10), command=self.move_to_recycle_bin).pack(side=LEFT, padx=5)
-        Button(action_frame, text="Delete Permanently", bg="#DC3545", fg="white", width=22,
+        Button(action_frame, text="Delete Permanently", bg="#EC7063", fg="white", width=20,
                font=("Segoe UI", 10), command=self.delete_permanently).pack(side=LEFT, padx=5)
-        Button(action_frame, text="Cancel Delivery", bg="#D9534F", fg="white", width=20,
+        Button(action_frame, text="Cancel Delivery", bg="#EC7063", fg="white", width=18,
                font=("Segoe UI", 10), command=self.cancel_delivery).pack(side=LEFT, padx=5)
+        Button(action_frame, text="Reset ID", bg="#ABB2B9", fg="white", width=15,
+               font=("Segoe UI", 10), command=self.reset_ids).pack(side=LEFT, padx=5)
         
         # Deliveries list
         list_frame = Frame(center_frame, bg="#2E4057")
@@ -75,9 +77,9 @@ class DeliveryManagement:
         bottom_frame = Frame(center_frame, bg="#2E4057")
         bottom_frame.pack(fill=X, pady=10)
         
-        Button(bottom_frame, text="Refresh Dashboard", width=20, bg="#17A2B8", fg="white",
+        Button(bottom_frame, text="Refresh Dashboard", width=20, bg="#5DADE2", fg="white",
                font=("Segoe UI", 10), command=self.main_window.show_dashboard).pack(side=LEFT, padx=10)
-        Button(bottom_frame, text="Logout", width=15, bg="#DC3545", fg="white",
+        Button(bottom_frame, text="Logout", width=15, bg="#ABB2B9", fg="white",
                font=("Segoe UI", 10), command=self.main_window.logout).pack(side=LEFT, padx=10)
         
         self.load_deliveries()
@@ -247,3 +249,17 @@ class DeliveryManagement:
                 self.load_deliveries()
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to cancel delivery: {e}")
+    
+    def reset_ids(self):
+        """Reset auto-increment ID for deliveries table"""
+        if messagebox.askyesno("Confirm Reset", "This will reset the delivery ID counter. Are you sure?"):
+            try:
+                conn = mysql.connector.connect(host="127.0.0.1", user="root", password="", database="inventories")
+                cursor = conn.cursor()
+                cursor.execute("ALTER TABLE deliveries AUTO_INCREMENT = 1")
+                conn.commit()
+                conn.close()
+                
+                messagebox.showinfo("Success", "Delivery ID counter has been reset!")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to reset IDs: {e}")

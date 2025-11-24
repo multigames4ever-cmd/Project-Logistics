@@ -67,9 +67,9 @@ class BookDeliveryWindow:
         btn_frame = Frame(self.window, bg="#2C3E50")
         btn_frame.pack(pady=20)
         
-        Button(btn_frame, text="Book Delivery", bg="#28A745", fg="white",
+        Button(btn_frame, text="Book Delivery", bg="#52BE80", fg="white",
                font=("Segoe UI", 12), width=18, command=self.book_delivery).pack(side=LEFT, padx=15)
-        Button(btn_frame, text="Cancel", bg="#6C757D", fg="white",
+        Button(btn_frame, text="Cancel", bg="#ABB2B9", fg="white",
                font=("Segoe UI", 12), width=15, command=self.window.destroy).pack(side=LEFT, padx=15)
     
     def load_item_details(self):
