@@ -8,10 +8,10 @@
 
 ### Step 2: Import the Database
 - Open **phpMyAdmin**.
-- Create a new database (use the name required by your project).
-- Import the provided `.sql` file.
+- Create a new database.
+- Import the provided `.sql` files.
 
-### Step 3: Open the Project
+### Step 3: Open main.py
 - Locate and open `main.py`.
 
 ### Step 4: Run the Program
