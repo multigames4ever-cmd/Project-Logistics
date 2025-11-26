@@ -1,3 +1,7 @@
+"""
+Delivery Management Window
+Handles viewing, updating, and managing deliveries.
+"""
 from tkinter import *
 from tkinter import messagebox
 from tkinter.ttk import Treeview
@@ -5,18 +9,17 @@ import mysql.connector
 
 
 class DeliveryManagement:
+        # Delivery Management window for deliveries
     def __init__(self, parent_frame, main_window):
         self.parent_frame = parent_frame
         self.main_window = main_window
         self.username = main_window.username
         
     def show(self):
-        """Display delivery management content"""
-        # Clear parent frame
+            # Show delivery management UI and delivery list
         for widget in self.parent_frame.winfo_children():
             widget.destroy()
         
-        # Title with back button
         title_frame = Frame(self.parent_frame, bg="#34495E", height=60)
         title_frame.pack(fill=X)
         title_frame.pack_propagate(False)
@@ -24,21 +27,17 @@ class DeliveryManagement:
         Button(title_frame, text="← Dashboard", bg="#3498db", fg="white",
                font=("Segoe UI", 10, "bold"), command=self.main_window.show_dashboard).pack(side=LEFT, padx=20, pady=15)
         
-        # Center the title
         title_container = Frame(title_frame, bg="#34495E")
         title_container.place(relx=0.5, rely=0.5, anchor=CENTER)
         Label(title_container, text="🚛 Delivery Management", bg="#34495E", fg="white",
               font=("Segoe UI", 16, "bold")).pack()
         
-        # Content container for centering
         content_container = Frame(self.parent_frame, bg="#2E4057")
         content_container.pack(fill=BOTH, expand=True)
         
-        # Center frame - auto-size based on content
         center_frame = Frame(content_container, bg="#2E4057")
         center_frame.pack(expand=True, pady=20, padx=50)
         
-        # Action buttons
         action_frame = Frame(center_frame, bg="#2E4057")
         action_frame.pack(fill=X, pady=10)
         
@@ -53,12 +52,29 @@ class DeliveryManagement:
         Button(action_frame, text="Reset ID", bg="#ABB2B9", fg="white", width=15,
                font=("Segoe UI", 10), command=self.reset_ids).pack(side=LEFT, padx=5)
         
-        # Deliveries list
         list_frame = Frame(center_frame, bg="#2E4057")
         list_frame.pack(fill=BOTH, expand=True, pady=10)
         
-        Label(list_frame, text="Deliveries", bg="#2E4057", fg="white",
-              font=("Segoe UI", 12, "bold")).pack(anchor=W, pady=5)
+        header_frame = Frame(list_frame, bg="#2E4057")
+        header_frame.pack(fill=X, pady=5)
+        
+        Label(header_frame, text="Deliveries", bg="#2E4057", fg="white",
+              font=("Segoe UI", 12, "bold")).pack(side=LEFT)
+        
+        search_frame = Frame(header_frame, bg="#2E4057")
+        search_frame.pack(side=RIGHT)
+        
+        Label(search_frame, text="Search:", bg="#2E4057", fg="white",
+              font=("Segoe UI", 10)).pack(side=LEFT, padx=(0, 5))
+        
+        self.search_var = StringVar()
+        self.search_var.trace('w', lambda *args: self.filter_deliveries())
+        search_entry = Entry(search_frame, textvariable=self.search_var, width=30,
+                           font=("Segoe UI", 10))
+        search_entry.pack(side=LEFT)
+        
+        Button(search_frame, text="✖", bg="#EC7063", fg="white", width=3,
+               font=("Segoe UI", 9), command=lambda: self.search_var.set("")).pack(side=LEFT, padx=5)
         
         columns = ("ID", "Item", "Category", "Amount", "Status", "Truck ID", "Delivered At")
         self.delivery_tree = Treeview(list_frame, columns=columns, show="headings", height=15)
@@ -73,19 +89,10 @@ class DeliveryManagement:
         scrollbar.pack(side=RIGHT, fill=Y)
         self.delivery_tree.pack(fill=BOTH, expand=True)
         
-        # Bottom buttons
-        bottom_frame = Frame(center_frame, bg="#2E4057")
-        bottom_frame.pack(fill=X, pady=10)
-        
-        Button(bottom_frame, text="Refresh Dashboard", width=20, bg="#5DADE2", fg="white",
-               font=("Segoe UI", 10), command=self.main_window.show_dashboard).pack(side=LEFT, padx=10)
-        Button(bottom_frame, text="Logout", width=15, bg="#ABB2B9", fg="white",
-               font=("Segoe UI", 10), command=self.main_window.logout).pack(side=LEFT, padx=10)
-        
         self.load_deliveries()
     
-    def load_deliveries(self):
-        """Load deliveries from database"""
+    def load_deliveries(self, search_text=""):
+            # Load deliveries from database and display in treeview
         for item in self.delivery_tree.get_children():
             self.delivery_tree.delete(item)
         
@@ -115,8 +122,13 @@ class DeliveryManagement:
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load deliveries: {e}")
     
+    def filter_deliveries(self):
+            # Filter deliveries based on search input
+        search_text = self.search_var.get().lower()
+        self.load_deliveries(search_text)
+    
     def mark_as_delivered(self):
-        """Mark selected delivery as delivered"""
+            # Mark selected delivery as delivered
         selected = self.delivery_tree.selection()
         if not selected:
             messagebox.showwarning("No Selection", "Please select a delivery to mark as delivered")
@@ -135,20 +147,18 @@ class DeliveryManagement:
                 WHERE id=%s
             """, (delivery_id,))
             
-            # Free up the truck if assigned
             if truck_id and truck_id != "Not Assigned":
                 cursor.execute("UPDATE trucks SET status='Available' WHERE id=%s", (truck_id,))
             
             conn.commit()
             conn.close()
             
-            messagebox.showinfo("Success", "Delivery marked as delivered!")
             self.load_deliveries()
         except Exception as e:
             messagebox.showerror("Error", f"Failed to mark as delivered: {e}")
     
     def move_to_recycle_bin(self):
-        """Move delivery to recycle bin (soft delete)"""
+            # Move selected delivery to recycle bin
         selected = self.delivery_tree.selection()
         if not selected:
             messagebox.showwarning("No Selection", "Please select a delivery to move to recycle bin")
@@ -166,13 +176,12 @@ class DeliveryManagement:
                 conn.commit()
                 conn.close()
                 
-                messagebox.showinfo("Success", "Delivery moved to recycle bin!")
                 self.load_deliveries()
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to move to recycle bin: {e}")
     
     def delete_permanently(self):
-        """Permanently delete delivery"""
+            # Permanently delete selected delivery
         selected = self.delivery_tree.selection()
         if not selected:
             messagebox.showwarning("No Selection", "Please select a delivery to delete permanently")
@@ -190,13 +199,12 @@ class DeliveryManagement:
                 conn.commit()
                 conn.close()
                 
-                messagebox.showinfo("Success", "Delivery permanently deleted!")
                 self.load_deliveries()
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to delete permanently: {e}")
     
     def cancel_delivery(self):
-        """Cancel selected delivery and return items to inventory"""
+            # Cancel selected delivery and return items to inventory
         selected = self.delivery_tree.selection()
         if not selected:
             messagebox.showwarning("No Selection", "Please select a delivery to cancel")
@@ -212,7 +220,6 @@ class DeliveryManagement:
                 conn = mysql.connector.connect(host="127.0.0.1", user="root", password="", database="inventories")
                 cursor = conn.cursor()
                 
-                # Get delivery details
                 cursor.execute("""
                     SELECT inventory_id, Delivery_Amount 
                     FROM deliveries 
@@ -223,17 +230,14 @@ class DeliveryManagement:
                 if result:
                     inventory_id, amount = result
                     
-                    # Return items to inventory
                     cursor.execute("""
                         UPDATE inventory 
                         SET Quantity = Quantity + %s 
                         WHERE id = %s
                     """, (amount, inventory_id))
                     
-                    # Mark delivery as deleted
                     cursor.execute("UPDATE deliveries SET Deleted=1 WHERE id=%s", (delivery_id,))
                     
-                    # Free up the truck if assigned
                     if truck_id and truck_id != "Not Assigned":
                         try:
                             cursor.execute("UPDATE trucks SET status='Available' WHERE id=%s", (truck_id,))
@@ -241,7 +245,6 @@ class DeliveryManagement:
                             pass
                     
                     conn.commit()
-                    messagebox.showinfo("Success", f"Delivery cancelled! {amount} items returned to inventory.")
                 else:
                     messagebox.showerror("Error", "Delivery not found")
                 
@@ -251,15 +254,21 @@ class DeliveryManagement:
                 messagebox.showerror("Error", f"Failed to cancel delivery: {e}")
     
     def reset_ids(self):
-        """Reset auto-increment ID for deliveries table"""
-        if messagebox.askyesno("Confirm Reset", "This will reset the delivery ID counter. Are you sure?"):
+            # Reset delivery ID counter
+        if messagebox.askyesno("Confirm Reset", "This will reset the delivery ID counter based on the highest existing ID. Continue?"):
             try:
                 conn = mysql.connector.connect(host="127.0.0.1", user="root", password="", database="inventories")
                 cursor = conn.cursor()
-                cursor.execute("ALTER TABLE deliveries AUTO_INCREMENT = 1")
+                
+                # Get the maximum ID from the table
+                cursor.execute("SELECT MAX(id) FROM deliveries")
+                max_id = cursor.fetchone()[0]
+                
+                # Set AUTO_INCREMENT to max_id + 1, or 1 if table is empty
+                next_id = (max_id + 1) if max_id else 1
+                cursor.execute(f"ALTER TABLE deliveries AUTO_INCREMENT = {next_id}")
+                
                 conn.commit()
                 conn.close()
-                
-                messagebox.showinfo("Success", "Delivery ID counter has been reset!")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to reset IDs: {e}")

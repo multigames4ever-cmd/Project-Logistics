@@ -1,9 +1,14 @@
+"""
+Book Delivery Window
+Allows booking a delivery for an inventory item.
+"""
 from tkinter import *
 from tkinter import messagebox
 import mysql.connector
 
 
 class BookDeliveryWindow:
+        # Book Delivery window for creating deliveries
     def __init__(self, master, username=None, item_id=None, callback=None):
         self.master = master
         self.username = username
@@ -15,14 +20,11 @@ class BookDeliveryWindow:
         self.window.geometry("750x550")
         self.window.configure(bg="#2C3E50")
         
-        # Get item details first
         self.load_item_details()
         
-        # Only continue if item was loaded successfully
         if not hasattr(self, 'item_name'):
             return
         
-        # Center the window
         self.window.update_idletasks()
         width = 750
         height = 550
@@ -30,15 +32,12 @@ class BookDeliveryWindow:
         y = (self.window.winfo_screenheight() // 2) - (height // 2)
         self.window.geometry(f'{width}x{height}+{x}+{y}')
         
-        # Title
         Label(self.window, text="Book Delivery", bg="#2C3E50", fg="white",
               font=("Segoe UI", 16, "bold")).pack(pady=20)
         
-        # Item Information Frame
         info_frame = Frame(self.window, bg="#34495E", relief=RIDGE, bd=2)
         info_frame.pack(pady=10, padx=50, fill=X)
         
-        # Add padding inside frame
         Label(info_frame, text="", bg="#34495E").pack(pady=10)
         
         Label(info_frame, text=f"Item ID: {self.item_id}", bg="#34495E", fg="white",
@@ -54,7 +53,6 @@ class BookDeliveryWindow:
         
         Label(info_frame, text="", bg="#34495E").pack(pady=10)
         
-        # Delivery Amount Frame
         amount_frame = Frame(self.window, bg="#2C3E50")
         amount_frame.pack(pady=20)
         
@@ -63,7 +61,6 @@ class BookDeliveryWindow:
         self.amount_entry = Entry(amount_frame, font=("Segoe UI", 13), width=25)
         self.amount_entry.grid(row=0, column=1, padx=15, pady=5)
         
-        # Buttons
         btn_frame = Frame(self.window, bg="#2C3E50")
         btn_frame.pack(pady=20)
         
@@ -73,7 +70,6 @@ class BookDeliveryWindow:
                font=("Segoe UI", 12), width=15, command=self.window.destroy).pack(side=LEFT, padx=15)
     
     def load_item_details(self):
-        """Load item details from database"""
         try:
             conn = mysql.connector.connect(host="127.0.0.1", user="root", password="", database="inventories")
             cursor = conn.cursor()
@@ -96,7 +92,6 @@ class BookDeliveryWindow:
                 self.window.destroy()
     
     def book_delivery(self):
-        """Book the delivery"""
         delivery_amount = self.amount_entry.get().strip()
         
         if not delivery_amount:
@@ -113,18 +108,15 @@ class BookDeliveryWindow:
                                      f"Cannot deliver {delivery_amount}. Only {self.item_quantity} available.")
                 return
             
-            # Create delivery record and update inventory quantity
             conn = mysql.connector.connect(host="127.0.0.1", user="root", password="", database="inventories")
             cursor = conn.cursor()
             
             try:
-                # Insert delivery record
                 cursor.execute("""
                     INSERT INTO deliveries (inventory_id, Name, Category, Delivery_Amount, Status, Deleted)
                     VALUES (%s, %s, %s, %s, 'Pending', 0)
                 """, (self.item_id, self.item_name, self.item_category, delivery_amount))
                 
-                # Update inventory quantity
                 cursor.execute("""
                     UPDATE inventory 
                     SET Quantity = Quantity - %s 
@@ -133,9 +125,6 @@ class BookDeliveryWindow:
                 
                 conn.commit()
                 
-                messagebox.showinfo("Success", f"Delivery booked for {delivery_amount} units of {self.item_name}")
-                
-                # Call callback to refresh inventory if provided
                 if self.callback:
                     self.callback()
                 

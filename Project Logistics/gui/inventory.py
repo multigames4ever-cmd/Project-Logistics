@@ -1,23 +1,24 @@
+"""
+Inventory Management Window
+Handles viewing, updating, and managing inventory items.
+"""
 from tkinter import *
 from tkinter import messagebox, simpledialog
 from tkinter.ttk import Treeview, Combobox
 import mysql.connector
-from book_delivery import BookDeliveryWindow
 
 
 class InventoryManagement:
+        # Inventory Management window for inventory
     def __init__(self, parent_frame, main_window):
         self.parent_frame = parent_frame
         self.main_window = main_window
         self.username = main_window.username
         
     def show(self):
-        """Display inventory management content"""
-        # Clear parent frame
         for widget in self.parent_frame.winfo_children():
             widget.destroy()
         
-        # Title with back button
         title_frame = Frame(self.parent_frame, bg="#34495E", height=60)
         title_frame.pack(fill=X)
         title_frame.pack_propagate(False)
@@ -25,21 +26,17 @@ class InventoryManagement:
         Button(title_frame, text="← Dashboard", bg="#3498db", fg="white",
                font=("Segoe UI", 10, "bold"), command=self.main_window.show_dashboard).pack(side=LEFT, padx=20, pady=15)
         
-        # Center the title
         title_container = Frame(title_frame, bg="#34495E")
         title_container.place(relx=0.5, rely=0.5, anchor=CENTER)
         Label(title_container, text="📦 Inventory Management", bg="#34495E", fg="white",
               font=("Segoe UI", 16, "bold")).pack()
         
-        # Content container for centering
         content_container = Frame(self.parent_frame, bg="#2E4057")
         content_container.pack(fill=BOTH, expand=True)
         
-        # Center frame - auto-size based on content
         center_frame = Frame(content_container, bg="#2E4057")
         center_frame.pack(expand=True, pady=20, padx=50)
         
-        # Action buttons
         action_frame = Frame(center_frame, bg="#2E4057")
         action_frame.pack(fill=X, pady=10)
         
@@ -54,12 +51,29 @@ class InventoryManagement:
         Button(action_frame, text="Reset ID", bg="#ABB2B9", fg="white", width=15,
                font=("Segoe UI", 10), command=self.reset_ids).pack(side=LEFT, padx=5)
         
-        # Inventory list
         list_frame = Frame(center_frame, bg="#2E4057")
         list_frame.pack(fill=BOTH, expand=True, pady=10)
         
-        Label(list_frame, text="Inventory List", bg="#2E4057", fg="white",
-              font=("Segoe UI", 12, "bold")).pack(anchor=W, pady=5)
+        header_frame = Frame(list_frame, bg="#2E4057")
+        header_frame.pack(fill=X, pady=5)
+        
+        Label(header_frame, text="Inventory List", bg="#2E4057", fg="white",
+              font=("Segoe UI", 12, "bold")).pack(side=LEFT)
+        
+        search_frame = Frame(header_frame, bg="#2E4057")
+        search_frame.pack(side=RIGHT)
+        
+        Label(search_frame, text="Search:", bg="#2E4057", fg="white",
+              font=("Segoe UI", 10)).pack(side=LEFT, padx=(0, 5))
+        
+        self.search_var = StringVar()
+        self.search_var.trace('w', lambda *args: self.filter_inventory())
+        search_entry = Entry(search_frame, textvariable=self.search_var, width=30,
+                           font=("Segoe UI", 10))
+        search_entry.pack(side=LEFT)
+        
+        Button(search_frame, text="✖", bg="#EC7063", fg="white", width=3,
+               font=("Segoe UI", 9), command=lambda: self.search_var.set("")).pack(side=LEFT, padx=5)
         
         columns = ("ID", "Name", "Category", "Quantity", "Brand")
         self.inventory_tree = Treeview(list_frame, columns=columns, show="headings", height=15)
@@ -73,22 +87,11 @@ class InventoryManagement:
         scrollbar.pack(side=RIGHT, fill=Y)
         self.inventory_tree.pack(fill=BOTH, expand=True)
         
-        # Form frame
         self.form_frame = Frame(center_frame, bg="#34495E")
-        
-        # Bottom buttons
-        bottom_frame = Frame(center_frame, bg="#2E4057")
-        bottom_frame.pack(fill=X, pady=10)
-        
-        Button(bottom_frame, text="Refresh Dashboard", width=20, bg="#5DADE2", fg="white",
-               font=("Segoe UI", 10), command=self.main_window.show_dashboard).pack(side=LEFT, padx=10)
-        Button(bottom_frame, text="Logout", width=15, bg="#ABB2B9", fg="white",
-               font=("Segoe UI", 10), command=self.main_window.logout).pack(side=LEFT, padx=10)
         
         self.load_inventory()
     
     def load_inventory(self):
-        """Load inventory from database"""
         for item in self.inventory_tree.get_children():
             self.inventory_tree.delete(item)
         
@@ -104,8 +107,27 @@ class InventoryManagement:
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load inventory: {e}")
     
+    def filter_inventory(self):
+        search_text = self.search_var.get().lower()
+        
+        for item in self.inventory_tree.get_children():
+            self.inventory_tree.delete(item)
+        
+        try:
+            conn = mysql.connector.connect(host="127.0.0.1", user="root", password="", database="inventories")
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, Name, Category, Quantity, Brand FROM inventory WHERE Deleted=0 ORDER BY id DESC")
+            
+            for row in cursor.fetchall():
+                if search_text in str(row[0]).lower() or search_text in row[1].lower() or \
+                   search_text in row[2].lower() or search_text in row[4].lower():
+                    self.inventory_tree.insert("", END, values=row)
+            
+            conn.close()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to filter inventory: {e}")
+    
     def show_add_form(self):
-        """Show form to add new item"""
         self.clear_form()
         self.form_frame.pack(fill=X, pady=10, padx=20)
         
@@ -126,7 +148,6 @@ class InventoryManagement:
         category_combo = Combobox(category_frame, width=20, state="readonly")
         category_combo.pack(side=LEFT)
         
-        # Load categories
         def load_categories():
             try:
                 conn = mysql.connector.connect(host="127.0.0.1", user="root", password="", database="inventories")
@@ -150,7 +171,6 @@ class InventoryManagement:
                     conn.commit()
                     conn.close()
                     load_categories()
-                    messagebox.showinfo("Success", "Category added!")
                 except Exception as e:
                     messagebox.showerror("Error", f"Failed to add category: {e}")
         
@@ -164,7 +184,6 @@ class InventoryManagement:
                     conn.commit()
                     conn.close()
                     load_categories()
-                    messagebox.showinfo("Success", "Category removed!")
                 except Exception as e:
                     messagebox.showerror("Error", f"Failed to remove category: {e}")
         
@@ -201,7 +220,6 @@ class InventoryManagement:
                 conn.commit()
                 conn.close()
                 
-                messagebox.showinfo("Success", "Item added successfully!")
                 self.clear_form()
                 self.load_inventory()
             except Exception as e:
@@ -214,7 +232,6 @@ class InventoryManagement:
         Button(btn_frame, text="Cancel", bg="#6C757D", fg="white", width=12, command=self.clear_form).pack(side=LEFT, padx=5)
     
     def show_update_form(self):
-        """Show form to update item"""
         selected = self.inventory_tree.selection()
         if not selected:
             messagebox.showwarning("No Selection", "Please select an item to update")
@@ -282,7 +299,6 @@ class InventoryManagement:
                 conn.commit()
                 conn.close()
                 
-                messagebox.showinfo("Success", "Item updated successfully!")
                 self.clear_form()
                 self.load_inventory()
             except Exception as e:
@@ -295,7 +311,6 @@ class InventoryManagement:
         Button(btn_frame, text="Cancel", bg="#6C757D", fg="white", width=12, command=self.clear_form).pack(side=LEFT, padx=5)
     
     def show_remove_form(self):
-        """Show form to remove item"""
         selected = self.inventory_tree.selection()
         if not selected:
             messagebox.showwarning("No Selection", "Please select an item to remove")
@@ -327,7 +342,6 @@ class InventoryManagement:
                     conn.commit()
                     conn.close()
                     
-                    messagebox.showinfo("Success", "Item moved to Recycle Bin!")
                     self.clear_form()
                     self.load_inventory()
                 except Exception as e:
@@ -342,7 +356,6 @@ class InventoryManagement:
                     conn.commit()
                     conn.close()
                     
-                    messagebox.showinfo("Success", "Item permanently deleted!")
                     self.clear_form()
                     self.load_inventory()
                 except Exception as e:
@@ -355,20 +368,87 @@ class InventoryManagement:
         Button(btn_frame, text="Cancel", bg="#6C757D", fg="white", width=12, command=self.clear_form).pack(side=LEFT, padx=5)
     
     def open_book_delivery(self):
-        """Open book delivery window"""
         selected = self.inventory_tree.selection()
         if not selected:
             messagebox.showwarning("No Selection", "Please select an item to book delivery")
             return
         
         item = self.inventory_tree.item(selected[0])
-        item_id = item['values'][0]
+        item_id, name, category, quantity, brand = item['values']
         
-        # Pass callback to refresh inventory after booking
-        BookDeliveryWindow(self.main_window.window, self.username, item_id, callback=self.load_inventory)
+        self.clear_form()
+        self.form_frame.pack(fill=X, pady=10, padx=20)
+        
+        Label(self.form_frame, text=f"Book Delivery (ID: {item_id})", bg="#34495E", fg="white",
+              font=("Segoe UI", 12, "bold")).pack(pady=10)
+        
+        info_frame = Frame(self.form_frame, bg="#34495E")
+        info_frame.pack(pady=10, padx=20, fill=X)
+        
+        Label(info_frame, text=f"Name: {name}", bg="#34495E", fg="white",
+              font=("Segoe UI", 11)).pack(anchor=W, pady=3)
+        Label(info_frame, text=f"Category: {category}", bg="#34495E", fg="white",
+              font=("Segoe UI", 11)).pack(anchor=W, pady=3)
+        Label(info_frame, text=f"Available Quantity: {quantity}", bg="#34495E", fg="white",
+              font=("Segoe UI", 11)).pack(anchor=W, pady=3)
+        Label(info_frame, text=f"Brand: {brand}", bg="#34495E", fg="white",
+              font=("Segoe UI", 11)).pack(anchor=W, pady=3)
+        
+        input_frame = Frame(self.form_frame, bg="#34495E")
+        input_frame.pack(pady=10)
+        
+        Label(input_frame, text="Delivery Amount:", bg="#34495E", fg="white").grid(row=0, column=0, padx=5, pady=5, sticky=W)
+        amount_entry = Entry(input_frame, width=25)
+        amount_entry.grid(row=0, column=1, padx=5, pady=5)
+        
+        def submit():
+            delivery_amount = amount_entry.get().strip()
+            
+            if not delivery_amount:
+                messagebox.showwarning("Input Required", "Please enter delivery amount")
+                return
+            
+            try:
+                delivery_amount_val = int(delivery_amount)
+                if delivery_amount_val <= 0:
+                    messagebox.showwarning("Invalid Amount", "Delivery amount must be greater than 0")
+                    return
+                if delivery_amount_val > quantity:
+                    messagebox.showwarning("Insufficient Quantity",
+                                         f"Cannot deliver {delivery_amount_val}. Only {quantity} available.")
+                    return
+                
+                conn = mysql.connector.connect(host="127.0.0.1", user="root", password="", database="inventories")
+                cursor = conn.cursor()
+                
+                cursor.execute("""
+                    INSERT INTO deliveries (inventory_id, Name, Category, Delivery_Amount, Status, Deleted)
+                    VALUES (%s, %s, %s, %s, 'Pending', 0)
+                """, (item_id, name, category, delivery_amount_val))
+                
+                cursor.execute("""
+                    UPDATE inventory 
+                    SET Quantity = Quantity - %s 
+                    WHERE id = %s
+                """, (delivery_amount_val, item_id))
+                
+                conn.commit()
+                conn.close()
+                
+                self.clear_form()
+                self.load_inventory()
+            except ValueError:
+                messagebox.showerror("Invalid Input", "Delivery amount must be a number")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to book delivery: {e}")
+        
+        btn_frame = Frame(self.form_frame, bg="#34495E")
+        btn_frame.pack(pady=10)
+        
+        Button(btn_frame, text="Book Delivery", bg="#52BE80", fg="white", width=12, command=submit).pack(side=LEFT, padx=5)
+        Button(btn_frame, text="Cancel", bg="#6C757D", fg="white", width=12, command=self.clear_form).pack(side=LEFT, padx=5)
     
     def clear_form(self):
-        """Clear and hide form"""
         try:
             for widget in self.form_frame.winfo_children():
                 widget.destroy()
@@ -377,15 +457,20 @@ class InventoryManagement:
             pass
     
     def reset_ids(self):
-        """Reset auto-increment ID for inventory table"""
-        if messagebox.askyesno("Confirm Reset", "This will reset the inventory ID counter. Are you sure?"):
+        if messagebox.askyesno("Confirm Reset", "This will reset the inventory ID counter based on the highest existing ID. Continue?"):
             try:
                 conn = mysql.connector.connect(host="127.0.0.1", user="root", password="", database="inventories")
                 cursor = conn.cursor()
-                cursor.execute("ALTER TABLE inventory AUTO_INCREMENT = 1")
+                
+                # Get the maximum ID from the table
+                cursor.execute("SELECT MAX(id) FROM inventory")
+                max_id = cursor.fetchone()[0]
+                
+                # Set AUTO_INCREMENT to max_id + 1, or 1 if table is empty
+                next_id = (max_id + 1) if max_id else 1
+                cursor.execute(f"ALTER TABLE inventory AUTO_INCREMENT = {next_id}")
+                
                 conn.commit()
                 conn.close()
-                
-                messagebox.showinfo("Success", "Inventory ID counter has been reset!")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to reset IDs: {e}")

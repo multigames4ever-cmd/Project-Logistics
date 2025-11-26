@@ -1,3 +1,7 @@
+"""
+Update Trucks Window
+Allows updating truck details and status.
+"""
 import mysql.connector
 
 conn = mysql.connector.connect(

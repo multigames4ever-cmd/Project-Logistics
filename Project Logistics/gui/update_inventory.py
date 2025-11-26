@@ -1,3 +1,7 @@
+"""
+Update Inventory Window
+Allows updating existing inventory items.
+"""
 from tkinter import *
 from tkinter import messagebox, ttk
 import os
@@ -94,9 +98,7 @@ class UpdateInventory:
 		self.center_window()
 
 	def center_window(self):
-		"""Center the window on screen"""
 		self.window.update_idletasks()
-		# Parse the geometry to get actual dimensions
 		geom = self.window.geometry().split('+')[0].split('x')
 		w = int(geom[0]) if geom[0] else 600
 		h = int(geom[1]) if len(geom) > 1 and geom[1] else 400
@@ -104,15 +106,7 @@ class UpdateInventory:
 		y = (self.window.winfo_screenheight() // 2) - (h // 2)
 		self.window.geometry(f"{w}x{h}+{x}+{y}")
 
-	def run(self):
-		if self.window.master:  # If it's a Toplevel, just center it
-			self.center_window()
-		else:  # If it's a standalone window, run mainloop
-			self.center_window()
-			self.window.mainloop()
-
-	def init_categories_table(self):
-		"""Initialize the categories table with default categories"""
+	def show_book_delivery_form(self):
 		try:
 			conn = mysql.connector.connect(
 				host="127.0.0.1",
@@ -122,7 +116,6 @@ class UpdateInventory:
 			)
 			cursor = conn.cursor()
 			
-			# Create categories table
 			cursor.execute(
 				"""
 				CREATE TABLE IF NOT EXISTS categories (
@@ -266,6 +259,8 @@ class UpdateInventory:
 				messagebox.showwarning("Cannot Delete", 
 				                      f"Category '{selected_category}' is being used by {count} item(s). "
 				                      "Please update or remove those items first.")
+				cursor.close()
+				conn.close()
 				return
 			
 			# Confirm deletion
@@ -273,16 +268,13 @@ class UpdateInventory:
 			                      f"Are you sure you want to delete the category '{selected_category}'?"):
 				cursor.execute("DELETE FROM categories WHERE name = %s", (selected_category,))
 				conn.commit()
-				
-				messagebox.showinfo("Success", f"Category '{selected_category}' deleted successfully!")
 				self.load_categories()
 			
 			cursor.close()
 			conn.close()
-			
-		except Error as e:
-			messagebox.showerror("Database Error", f"Error removing category: {e}")
 
+		except Error as e:
+			messagebox.showerror("Database Error", f"Error removing category: {e}")	
 	def load_item(self):
 		if not self.item_id:
 			return
@@ -387,7 +379,6 @@ class UpdateInventory:
 			if cursor.rowcount == 0:
 				messagebox.showwarning("Update Failed", "Item ID not found.")
 			else:
-				messagebox.showinfo("Success", "Item updated successfully!")
 				was_being = being_flag
 				try:
 					qty_after = int(quantity_to_set)
@@ -420,8 +411,6 @@ class UpdateInventory:
 							pass
 					except Error:
 						pass
-				if qty_after == 0:
-					messagebox.showinfo("Info", "Item quantity is now zero.")
 				self.clear_fields()
 
 			cursor.close()
@@ -509,17 +498,7 @@ class UpdateInventory:
 		except:
 			pass
 		
-		# Show new window (let the app's run() method handle showing)
 		app.run()
 
-	def go_to_add(self):
-		from add_inventory import AddInventory
-		self.smooth_transition_to(AddInventory, self.username)
-
-	def go_to_remove(self):
-		from remove_inventory import RemoveInventory
-		self.smooth_transition_to(RemoveInventory, self.username)
-
 	def back_to_main(self):
-		from main_window import MainWindow
-		self.smooth_transition_to(MainWindow, self.username or "")
+		self.window.destroy()

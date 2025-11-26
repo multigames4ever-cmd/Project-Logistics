@@ -1,3 +1,7 @@
+"""
+Remove Inventory Window
+Allows removing inventory items from the system.
+"""
 from tkinter import *
 from tkinter import messagebox
 import os
@@ -64,22 +68,14 @@ class RemoveInventory:
 		Button(button_frame, text="Delete Permanently", width=16, bg="#8B0000", fg="white",
 			command=self.permanently_delete).pack(side=LEFT, padx=5)
 		Button(button_frame, text="Back", width=10, bg="#FF8C42", fg="white",
-		       command=self.back_to_main).pack(side=LEFT, padx=5)		if self.item_id:
-		self.load_item()
+		       command=self.back_to_main).pack(side=LEFT, padx=5)
+		if self.item_id:
+			self.load_item()
 
 		self.center_window()
 
-	def run(self):
-		if self.window.master:  # If it's a Toplevel, just center it
-			self.center_window()
-		else:  # If it's a standalone window, run mainloop
-			self.center_window()
-			self.window.mainloop()
-
 	def center_window(self):
-		"""Center the window on screen"""
 		self.window.update_idletasks()
-		# Parse the geometry to get actual dimensions
 		geom = self.window.geometry().split('+')[0].split('x')
 		w = int(geom[0]) if geom[0] else 600
 		h = int(geom[1]) if len(geom) > 1 and geom[1] else 400
@@ -117,9 +113,8 @@ class RemoveInventory:
 			if cursor.rowcount == 0:
 				messagebox.showwarning("Operation Failed", "Item ID not found.")
 			else:
-				messagebox.showinfo("Success", "Item moved to Recycle Bin.")
 				self.clear_fields()
-
+			
 			cursor.close()
 			conn.close()
 		except Error as e:
@@ -229,60 +224,5 @@ class RemoveInventory:
 		except Error as e:
 			messagebox.showerror("Database Error", f"Error: {e}")
 
-	def smooth_transition_to(self, target_class, *args):
-		"""Smooth transition to another window"""
-		try:
-			current_x = self.window.winfo_x()
-			current_y = self.window.winfo_y()
-		except:
-			try:
-				current_x = (self.window.winfo_screenwidth() // 2) - 400
-				current_y = (self.window.winfo_screenheight() // 2) - 300
-			except:
-				current_x = 400
-				current_y = 300
-		
-		try:
-			self.window.withdraw()
-		except:
-			pass
-		
-		new_root = Tk()
-		new_root.withdraw()
-		
-		try:
-			new_root.geometry(f"+{current_x}+{current_y}")
-		except:
-			new_root.geometry("+400+300")
-		
-		app = target_class(new_root, *args)
-		
-		try:
-			self.window.destroy()
-		except:
-			pass
-		
-		try:
-			new_root.deiconify()
-			new_root.lift()
-			new_root.focus_force()
-		except:
-			pass
-		
-		app.run()
-
-	def go_to_add(self):
-		from add_inventory import AddInventory
-		self.smooth_transition_to(AddInventory, self.username)
-
-	def go_to_update(self):
-		from update_inventory import UpdateInventory
-		self.smooth_transition_to(UpdateInventory, self.username)
-
-	def go_to_remove(self):
-		from remove_inventory import RemoveInventory
-		self.smooth_transition_to(RemoveInventory, self.username)
-
 	def back_to_main(self):
-		from main_window import MainWindow
-		self.smooth_transition_to(MainWindow, self.username or "")
+		self.window.destroy()

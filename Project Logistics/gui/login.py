@@ -1,3 +1,7 @@
+"""
+Login Window
+Handles user authentication and login process.
+"""
 from tkinter import *
 from tkinter import messagebox
 import os
@@ -11,9 +15,8 @@ class LoginWindow:
         self.window.geometry("400x250")
         self.window.resizable(False, False)
         self.window.config(bg="#2E4057")
-        self.window.attributes('-topmost', True)  # Keep on top initially
+        self.window.attributes('-topmost', True)
         
-        # Remove topmost after a short delay
         self.window.after(100, lambda: self.window.attributes('-topmost', False))
 
         try:
@@ -81,7 +84,6 @@ class LoginWindow:
             messagebox.showwarning("Login failed", "Please enter both username and password.")
             return
         if VALID_CREDENTIALS.get(user) == pwd:
-            messagebox.showinfo("Login success", f"Welcome, {user}!")
             self.on_login_success(user)
         else:
             messagebox.showerror("Login failed", "Invalid username or password.")
@@ -96,11 +98,9 @@ class LoginWindow:
         except:
             pass
         
-        # Import and create new window
         from main_window import MainWindow
         root = Tk()
         
-        # Create and run main app
         main_app = MainWindow(root, username)
         main_app.run()
 

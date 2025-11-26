@@ -1,3 +1,7 @@
+"""
+Add Inventory Window
+Allows adding new inventory items to the system.
+"""
 from tkinter import *
 from tkinter import messagebox, ttk
 import os
@@ -45,17 +49,17 @@ class AddInventory:
 
 		Label(form_frame, text="Category:", bg="#2E4057", fg="white").grid(row=2, column=0, sticky="w", pady=5)
 		category_frame = Frame(form_frame, bg="#2E4057")
-		category_frame.grid(row=2, column=1, pady=5, padx=10, sticky="w")
+		category_frame.grid(row=2, column=1, pady=5, padx=10, sticky="ew")
 		
 		self.category_var = StringVar()
-		self.category_combo = ttk.Combobox(category_frame, textvariable=self.category_var, width=27, state="readonly")
-		self.category_combo.grid(row=0, column=0)
+		self.category_combo = ttk.Combobox(category_frame, textvariable=self.category_var, width=22, state="readonly")
+		self.category_combo.pack(side=LEFT)
 		
 		# Buttons for category management
 		Button(category_frame, text="+", width=2, bg="#28A745", fg="white", font=("Segoe UI", 8, "bold"),
-		       command=self.add_category).grid(row=0, column=1, padx=(3,1))
+		       command=self.add_category).pack(side=LEFT, padx=(3,1))
 		Button(category_frame, text="-", width=2, bg="#DC3545", fg="white", font=("Segoe UI", 8, "bold"),
-		       command=self.remove_category).grid(row=0, column=2, padx=1)
+		       command=self.remove_category).pack(side=LEFT, padx=1)
 		
 		self.load_categories()
 
@@ -235,6 +239,8 @@ class AddInventory:
 				messagebox.showwarning("Cannot Delete", 
 				                      f"Category '{selected_category}' is being used by {count} item(s). "
 				                      "Please update or remove those items first.")
+				cursor.close()
+				conn.close()
 				return
 			
 			# Confirm deletion
@@ -242,8 +248,6 @@ class AddInventory:
 			                      f"Are you sure you want to delete the category '{selected_category}'?"):
 				cursor.execute("DELETE FROM categories WHERE name = %s", (selected_category,))
 				conn.commit()
-				
-				messagebox.showinfo("Success", f"Category '{selected_category}' deleted successfully!")
 				self.load_categories()
 			
 			cursor.close()
@@ -252,65 +256,15 @@ class AddInventory:
 		except Error as e:
 			messagebox.showerror("Database Error", f"Error removing category: {e}")
 
+	
 	def center_window(self):
-		"""Center the window on screen"""
 		self.window.update_idletasks()
-		# Parse the geometry to get actual dimensions
 		geom = self.window.geometry().split('+')[0].split('x')
 		w = int(geom[0]) if geom[0] else 600
 		h = int(geom[1]) if len(geom) > 1 and geom[1] else 400
 		x = (self.window.winfo_screenwidth() // 2) - (w // 2)
 		y = (self.window.winfo_screenheight() // 2) - (h // 2)
 		self.window.geometry(f"{w}x{h}+{x}+{y}")
-
-	def smooth_transition_to(self, target_class, *args):
-		"""Smooth transition to another window"""
-		try:
-			current_x = self.window.winfo_x()
-			current_y = self.window.winfo_y()
-		except:
-			# Fallback to center if position can't be retrieved
-			try:
-				current_x = (self.window.winfo_screenwidth() // 2) - 400
-				current_y = (self.window.winfo_screenheight() // 2) - 300
-			except:
-				# Ultimate fallback if window is completely invalid
-				current_x = 400
-				current_y = 300
-		
-		# Fade out effect (withdraw window)
-		try:
-			self.window.withdraw()
-		except:
-			pass
-		
-		# Create new window
-		new_root = Tk()
-		new_root.withdraw()  # Start hidden
-		
-		try:
-			new_root.geometry(f"+{current_x}+{current_y}")  # Position at same location
-		except:
-			new_root.geometry("+400+300")  # Final fallback position
-		
-		# Create new app instance
-		app = target_class(new_root, *args)
-		
-		# Destroy old window
-		try:
-			self.window.destroy()
-		except:
-			pass
-		
-		# Run new app
-		app.run()
-
-	def run(self):
-		if self.window.master:  # If it's a Toplevel, just center it
-			self.center_window()
-		else:  # If it's a standalone window, run mainloop
-			self.center_window()
-			self.window.mainloop()
 
 	def add_item(self):
 		if not self.validate_fields():
@@ -324,9 +278,7 @@ class AddInventory:
 				database="inventories"
 			)
 			cursor = conn.cursor()
-
-			# Ensure `id` is AUTO_INCREMENT and attempt to start AUTO_INCREMENT at 1
-			# (MySQL will ignore setting AUTO_INCREMENT lower than current max id)
+			
 			try:
 				cursor.execute("ALTER TABLE inventory MODIFY id INT NOT NULL AUTO_INCREMENT")
 			except Error:
@@ -336,7 +288,6 @@ class AddInventory:
 			except Error:
 				pass
 
-			# Ensure inventory table exists with correct structure
 			cursor.execute("""
 				CREATE TABLE IF NOT EXISTS inventory (
 					ID INT AUTO_INCREMENT PRIMARY KEY,
@@ -349,7 +300,6 @@ class AddInventory:
 				)
 			""")
 
-			# Insert into inventory (database should assign id via AUTO_INCREMENT)
 			query = "INSERT INTO inventory (Name, Category, Quantity, Brand) VALUES (%s, %s, %s, %s)"
 			values = (
 				self.name_var.get(),
@@ -390,20 +340,10 @@ class AddInventory:
 		return True
 
 	def clear_fields(self):
-			# ID is auto-generated
-			self.name_var.set("")
-			self.category_var.set("")
-			self.quantity_var.set("")
-			self.brand_var.set("")
-
-	def go_to_update(self):
-		from update_inventory import UpdateInventory
-		self.smooth_transition_to(UpdateInventory, self.username)
-
-	def go_to_remove(self):
-		from remove_inventory import RemoveInventory
-		self.smooth_transition_to(RemoveInventory, self.username)
+		self.name_var.set("")
+		self.category_var.set("")
+		self.quantity_var.set("")
+		self.brand_var.set("")
 
 	def back_to_main(self):
-		from main_window import MainWindow
-		self.smooth_transition_to(MainWindow, self.username or "")
+		self.window.destroy()
